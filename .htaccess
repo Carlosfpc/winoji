@@ -1,0 +1,24 @@
+Options -Indexes
+
+# Block sensitive files and directories
+<FilesMatch "\.(env|log|md|sql|json|ini|lock)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Block direct access to config/ and storage/
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Route root requests (?page=...) to public/index.php
+    RewriteCond %{REQUEST_URI} ^/?$
+    RewriteRule ^ public/index.php [QSA,L]
+
+    # Block sensitive paths
+    RewriteRule ^config/ - [F,L]
+    RewriteRule ^storage/ - [F,L]
+    RewriteRule ^db/migrate\.php - [F,L]
+    RewriteRule ^db/seed_admin\.php - [F,L]
+    RewriteRule ^db/check_columns\.php - [F,L]
+    RewriteRule ^router\.php - [F,L]
+</IfModule>

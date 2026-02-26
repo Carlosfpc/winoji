@@ -1,0 +1,21 @@
+# Config with credentials (copy config/config.php to config/config.local.php for local overrides)
+# config/config.php
+
+# Environment file — contains secrets, never commit
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+storage/logs/*.log
+.worktrees/
+
+# Uploaded files — user content, not tracked in git
+public/uploads/

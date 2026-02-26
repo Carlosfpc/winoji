@@ -1,0 +1,4 @@
+-- Migration 001: Initial schema baseline
+-- This represents the baseline schema defined in db/schema.sql.
+-- Run db/schema.sql manually to initialize a fresh database,
+-- then run this runner so future migrations start from 002.
