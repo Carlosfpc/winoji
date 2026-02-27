@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS issue_types (
 );
 
 ALTER TABLE issues ADD COLUMN IF NOT EXISTS type_id INT DEFAULT NULL AFTER priority;
-ALTER TABLE issues ADD CONSTRAINT IF NOT EXISTS fk_issues_type FOREIGN KEY (type_id) REFERENCES issue_types(id) ON DELETE SET NULL;
+ALTER TABLE issues ADD CONSTRAINT fk_issues_type FOREIGN KEY (type_id) REFERENCES issue_types(id) ON DELETE SET NULL;
 
 -- Seed 4 default types for every existing project
 INSERT INTO issue_types (project_id, name, color, description)
