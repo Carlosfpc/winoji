@@ -3,6 +3,9 @@ let currentPage = 1;
 let currentPRs = [];
 let currentPRBranch = null;
 let issueTypes = [];   // cached types for this project
+let currentBranchSuggestedName = '';
+let branchModalIssueId = null;
+let branchModalOnSuccess = null;
 
 function sonarQGChip(status, url) {
     if (!status || status === 'NONE') return '';
@@ -98,6 +101,17 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+function titleToSlug(title) {
+    return (title || '')
+        .normalize('NFD').replaceAll(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replaceAll(/[^a-z0-9\s]/g, '')
+        .trim()
+        .replaceAll(/\s+/g, '-')
+        .replaceAll(/-+/g, '-')
+        .substring(0, 60);
 }
 
 function highlightMentions(text) {
@@ -227,9 +241,8 @@ async function openIssue(issue) {
         ? `<p style="font-size:0.875rem;line-height:1.6;margin:0;">${escapeHtml(issue.description)}</p>`
         : '<em style="color:var(--text-tertiary);font-size:0.875rem;">Sin descripción</em>';
 
-    document.getElementById('branch-input').value = `issue-${id}-`;
-    document.getElementById('branch-type-select').value = 'feature';
-    updateBranchPreview();
+    const slug = titleToSlug(issue.title);
+    currentBranchSuggestedName = slug ? `issue-${id}-${slug}` : `issue-${id}`;
     document.getElementById('issue-detail').classList.remove('hidden');
     await loadPRs(id);
     await loadBranches(id);
@@ -251,8 +264,7 @@ async function loadBranches(id) {
         return;
     }
     statusEl.innerHTML = `&#128279; <a href="https://github.com/${repoData.repo}" target="_blank" style="color:var(--color-primary);">${repoData.repo}</a>`;
-    createArea.style.display = 'flex';
-    updateBranchPreview();
+    createArea.style.display = 'block';
 
     const res = await fetch(`${APP_URL}/app/api/github.php?action=branches&issue_id=${id}`);
     const data = await res.json();
@@ -601,40 +613,57 @@ document.getElementById('save-label-btn').addEventListener('click', async () => 
     }
 });
 
-function updateBranchPreview() {
-    const type = document.getElementById('branch-type-select')?.value || 'feature';
-    const name = document.getElementById('branch-input')?.value.trim() || '';
-    const preview = document.getElementById('branch-preview');
-    if (preview) preview.textContent = name ? `${type}/${name}` : '';
+function updateBcmPreview() {
+    const type = document.getElementById('bcm-type').value;
+    const name = document.getElementById('bcm-name').value.trim();
+    document.getElementById('bcm-preview').textContent = name ? `${type}/${name}` : '';
 }
 
-document.getElementById('branch-type-select').addEventListener('change', updateBranchPreview);
-document.getElementById('branch-input').addEventListener('input', updateBranchPreview);
+function openBranchModal(issueId, suggestedName, onSuccess) {
+    branchModalIssueId = issueId;
+    branchModalOnSuccess = onSuccess;
+    document.getElementById('bcm-name').value = suggestedName || '';
+    document.getElementById('bcm-type').value = 'feature';
+    updateBcmPreview();
+    document.getElementById('branch-create-modal').classList.remove('hidden');
+    document.getElementById('bcm-name').select();
+}
 
-document.getElementById('create-branch-btn').addEventListener('click', async () => {
-    const type = document.getElementById('branch-type-select').value;
-    const name = document.getElementById('branch-input').value.trim();
-    if (!name || !currentIssueId) return;
-    // Validate branch name: only letters, numbers, - / _ .
+document.getElementById('bcm-type').addEventListener('change', updateBcmPreview);
+document.getElementById('bcm-name').addEventListener('input', updateBcmPreview);
+
+document.getElementById('bcm-cancel').addEventListener('click', () => {
+    document.getElementById('branch-create-modal').classList.add('hidden');
+});
+
+document.getElementById('bcm-confirm').addEventListener('click', async () => {
+    const type = document.getElementById('bcm-type').value;
+    const name = document.getElementById('bcm-name').value.trim();
+    if (!name) { showToast('Escribe un nombre para la rama', 'error'); return; }
     if (!/^[a-zA-Z0-9._/-]+$/.test(name)) {
         showToast('Nombre de rama inválido. Usa solo letras, números, guiones y barras.', 'error');
         return;
     }
     const fullBranch = `${type}/${name}`;
-    const btn = document.getElementById('create-branch-btn');
+    const btn = document.getElementById('bcm-confirm');
     btn.disabled = true; btn.textContent = 'Creando...';
     const res = await fetch(`${APP_URL}/app/api/github.php?action=create_branch`, {
         method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ issue_id: currentIssueId, branch_name: fullBranch, base_branch: 'main' })
+        body: JSON.stringify({ issue_id: branchModalIssueId, branch_name: fullBranch, base_branch: '' })
     });
     const data = await res.json();
-    btn.disabled = false; btn.textContent = 'Crear';
+    btn.disabled = false; btn.textContent = 'Crear rama';
     if (data.success) {
         showToast(`Rama '${fullBranch}' creada`);
-        await loadBranches(currentIssueId);
+        document.getElementById('branch-create-modal').classList.add('hidden');
+        if (branchModalOnSuccess) branchModalOnSuccess();
     } else {
         showToast(data.error || 'Error al crear la rama', 'error');
     }
+});
+
+document.getElementById('create-branch-btn').addEventListener('click', () => {
+    openBranchModal(currentIssueId, currentBranchSuggestedName, () => loadBranches(currentIssueId));
 });
 
 async function deleteCurrentIssue() {
@@ -696,8 +725,15 @@ document.getElementById('new-issue-btn').addEventListener('click', async () => {
         });
     }
 });
+document.getElementById('new-title').addEventListener('input', function () {
+    const branchEl = document.getElementById('new-branch-name');
+    if (!branchEl) return;
+    const slug = titleToSlug(this.value);
+    branchEl.value = slug ? `issue-${slug}` : '';
+});
 document.getElementById('new-cancel').addEventListener('click', () => {
     document.getElementById('new-issue-modal').classList.add('hidden');
+    document.getElementById('new-branch-name').value = '';
 });
 document.getElementById('new-save').addEventListener('click', async () => {
     const title = document.getElementById('new-title').value.trim();
@@ -730,6 +766,7 @@ document.getElementById('new-save').addEventListener('click', async () => {
     if (document.getElementById('new-assigned'))     document.getElementById('new-assigned').value = '';
     if (document.getElementById('new-due-date'))     document.getElementById('new-due-date').value = '';
     if (document.getElementById('new-story-points')) document.getElementById('new-story-points').value = '';
+    document.getElementById('new-branch-name').value = '';
     loadIssues();
 });
 
@@ -1076,9 +1113,7 @@ async function loadFullIssueBranches(id) {
         return;
     }
 
-    createArea.style.display = 'flex';
-    document.getElementById('fi-branch-input').value = `issue-${id}-`;
-    updateFiBranchPreview();
+    createArea.style.display = 'block';
 
     const res = await fetch(`${APP_URL}/app/api/github.php?action=branches&issue_id=${id}`);
     const data = await res.json();
@@ -1102,36 +1137,10 @@ async function loadFullIssueBranches(id) {
     }
 }
 
-function updateFiBranchPreview() {
-    const type  = document.getElementById('fi-branch-type-select')?.value || 'feature';
-    const name  = document.getElementById('fi-branch-input')?.value || '';
-    const el    = document.getElementById('fi-branch-preview');
-    if (el) el.textContent = `${type}/${name}`;
-}
-
-document.getElementById('fi-branch-type-select')?.addEventListener('change', updateFiBranchPreview);
-document.getElementById('fi-branch-input')?.addEventListener('input', updateFiBranchPreview);
-
-document.getElementById('fi-create-branch-btn')?.addEventListener('click', async () => {
-    const type   = document.getElementById('fi-branch-type-select').value;
-    const name   = document.getElementById('fi-branch-input').value.trim();
-    const full   = `${type}/${name}`;
-    if (!name) { showToast('Escribe un nombre para la rama', 'error'); return; }
-    const btn = document.getElementById('fi-create-branch-btn');
-    btn.disabled = true; btn.textContent = '...';
-    const res = await fetch(`${APP_URL}/app/api/github.php?action=create_branch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ issue_id: currentFullIssueId, branch_name: full, base_branch: 'main' })
-    });
-    const data = await res.json();
-    btn.disabled = false; btn.textContent = 'Crear';
-    if (data.success) {
-        showToast(`Rama ${full} creada`);
-        loadFullIssueBranches(currentFullIssueId);
-    } else {
-        showToast(data.error || 'Error al crear la rama', 'error');
-    }
+document.getElementById('fi-create-branch-btn')?.addEventListener('click', () => {
+    const slug = titleToSlug(document.getElementById('fi-title').value);
+    const suggested = slug ? `issue-${currentFullIssueId}-${slug}` : `issue-${currentFullIssueId}`;
+    openBranchModal(currentFullIssueId, suggested, () => loadFullIssueBranches(currentFullIssueId));
 });
 
 async function loadFullIssuePRs(id) {
@@ -1626,6 +1635,11 @@ function initTemplatePicker() {
         if (descEl  && tpl.description) descEl.value  = tpl.description;
         if (typeEl  && tpl.type_id)     typeEl.value  = tpl.type_id;
         if (prioEl  && tpl.priority)    prioEl.value  = tpl.priority;
+        if (titleEl && tpl.title) {
+            const slug = titleToSlug(tpl.title);
+            const branchEl = document.getElementById('new-branch-name');
+            if (branchEl) branchEl.value = slug ? `issue-${slug}` : '';
+        }
     });
 }
 
