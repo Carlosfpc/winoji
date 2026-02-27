@@ -108,17 +108,8 @@ require __DIR__ . '/../includes/layout_top.php';
         <strong>Ramas GitHub</strong>
         <div id="github-repo-status" class="text-sm text-muted mt-1 mb-2"></div>
         <div id="branch-list" class="mb-2"></div>
-        <div id="create-branch-area" style="display:none;margin-top:0.5rem;flex-direction:column;gap:0.4rem;">
-            <div class="flex gap-2">
-                <select id="branch-type-select" class="form-select">
-                    <option value="feature">feature/</option>
-                    <option value="bugfix">bugfix/</option>
-                    <option value="release">release/</option>
-                </select>
-                <input type="text" id="branch-input" placeholder="issue-42-name" class="form-input flex-1">
-                <button class="btn btn-primary" id="create-branch-btn">Create</button>
-            </div>
-            <div class="text-xs text-muted">Branch: <span id="branch-preview" class="font-mono text-primary-color"></span></div>
+        <div id="create-branch-area" style="display:none;margin-top:0.5rem;">
+            <button class="btn btn-primary btn-sm w-full" id="create-branch-btn">+ Crear rama</button>
         </div>
     </div>
     <hr class="mb-3 mt-3">
@@ -290,17 +281,8 @@ require __DIR__ . '/../includes/layout_top.php';
             <div class="card card-compact">
                 <div class="text-label mb-2">Ramas</div>
                 <div id="fi-branches" class="text-sm mb-2"></div>
-                <div id="fi-create-branch-area" style="display:none;flex-direction:column;gap:0.4rem;">
-                    <div class="flex gap-2">
-                        <select id="fi-branch-type-select" class="form-select">
-                            <option value="feature">feature/</option>
-                            <option value="bugfix">bugfix/</option>
-                            <option value="release">release/</option>
-                        </select>
-                        <input type="text" id="fi-branch-input" placeholder="issue-42-name" class="form-input flex-1">
-                        <button class="btn btn-primary btn-sm" id="fi-create-branch-btn">Crear</button>
-                    </div>
-                    <div class="text-xs text-muted">Rama: <span id="fi-branch-preview" class="font-mono text-primary-color"></span></div>
+                <div id="fi-create-branch-area" style="display:none;margin-top:0.25rem;">
+                    <button class="btn btn-primary btn-sm" id="fi-create-branch-btn">+ Crear rama</button>
                 </div>
             </div>
             <div class="card card-compact">
@@ -328,6 +310,10 @@ require __DIR__ . '/../includes/layout_top.php';
         </div>
         <div class="form-group">
             <input type="text" id="new-title" placeholder="Título" class="form-input w-full">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="new-branch-name">Nombre de rama sugerido</label>
+            <input type="text" id="new-branch-name" class="form-input w-full" placeholder="issue-nombre-de-la-tarea" style="font-family:monospace;font-size:0.85rem;">
         </div>
         <div class="form-row mb-3">
             <div class="flex-1">
@@ -368,6 +354,32 @@ require __DIR__ . '/../includes/layout_top.php';
         <div class="modal-footer">
             <button class="btn btn-secondary" id="new-cancel">Cancelar</button>
             <button class="btn btn-primary" id="new-save">Crear</button>
+        </div>
+    </div>
+</div>
+
+<!-- Create Branch Modal -->
+<div id="branch-create-modal" class="modal hidden">
+    <div class="modal-box" style="max-width:480px;">
+        <h3 class="mb-4">Crear rama</h3>
+        <div class="form-group">
+            <label class="form-label" for="bcm-type">Tipo</label>
+            <select id="bcm-type" class="form-select w-full">
+                <option value="feature">feature/</option>
+                <option value="bugfix">bugfix/</option>
+                <option value="release">release/</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="bcm-name">Nombre de rama</label>
+            <input type="text" id="bcm-name" class="form-input w-full" placeholder="issue-42-nombre" style="font-family:monospace;">
+        </div>
+        <div class="mb-4" style="font-size:0.875rem;color:var(--text-secondary);">
+            Rama: <span id="bcm-preview" class="font-mono" style="color:var(--color-primary);font-weight:600;"></span>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="bcm-cancel">Cancelar</button>
+            <button class="btn btn-primary" id="bcm-confirm">Crear rama</button>
         </div>
     </div>
 </div>

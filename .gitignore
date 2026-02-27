@@ -19,3 +19,5 @@ storage/logs/*.log
 
 # Uploaded files — user content, not tracked in git
 public/uploads/
+
+.claude
