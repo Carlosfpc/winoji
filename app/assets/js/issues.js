@@ -775,7 +775,8 @@ document.getElementById('new-save').addEventListener('click', async () => {
 async function openCreatePRModal(branchName) {
     currentPRBranch = branchName;
     document.getElementById('pr-branch-display').textContent = branchName;
-    const issueTitle = document.getElementById('detail-title').textContent.replace(/^#\d+\s*/, '');
+    const detailTitle = document.getElementById('detail-title')?.textContent?.replace(/^#\d+\s*/, '') || '';
+    const issueTitle = detailTitle || document.getElementById('fi-title')?.value?.trim() || '';
     document.getElementById('pr-title').value = issueTitle;
     document.getElementById('pr-body').value = '';
     document.getElementById('create-pr-modal').classList.remove('hidden');
@@ -817,10 +818,14 @@ document.getElementById('pr-submit').addEventListener('click', async () => {
     if (data.success) {
         document.getElementById('create-pr-modal').classList.add('hidden');
         showToast(`PR #${data.pr_number} creado. Haz clic en "Revisar y fusionar" para ver el diff`);
-        await loadPRs(currentIssueId);
-        await loadBranches(currentIssueId);
-        // Scroll to PR section
-        document.querySelector('.prs-section')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (currentFullIssueId) {
+            await Promise.all([loadFullIssuePRs(currentFullIssueId), loadFullIssueBranches(currentFullIssueId)]);
+        } else {
+            await loadPRs(currentIssueId);
+            await loadBranches(currentIssueId);
+            // Scroll to PR section
+            document.querySelector('.prs-section')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     } else {
         showToast(data.error || 'Failed to create PR', 'error');
     }
@@ -910,8 +915,12 @@ document.getElementById('merge-pr-btn').addEventListener('click', () => {
             if (data.success) {
                 showToast('Pull request merged!');
                 document.getElementById('diff-viewer-modal').classList.add('hidden');
-                await loadPRs(currentIssueId);
-                await loadBranches(currentIssueId);
+                if (currentFullIssueId) {
+                    await Promise.all([loadFullIssuePRs(currentFullIssueId), loadFullIssueBranches(currentFullIssueId)]);
+                } else {
+                    await loadPRs(currentIssueId);
+                    await loadBranches(currentIssueId);
+                }
                 fetch(`${APP_URL}/app/api/github.php?action=sync_pr_status`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ issue_id: currentIssueId })
@@ -1103,8 +1112,14 @@ async function removeLabelFromFullIssue(labelId) {
 }
 
 async function loadFullIssueBranches(id) {
-    const repoRes = await fetch(`${APP_URL}/app/api/github.php?action=repo_status&project_id=${PROJECT_ID}`);
+    const [repoRes, prsRes] = await Promise.all([
+        fetch(`${APP_URL}/app/api/github.php?action=repo_status&project_id=${PROJECT_ID}`),
+        fetch(`${APP_URL}/app/api/github.php?action=prs&issue_id=${id}`)
+    ]);
     const repoData = await repoRes.json();
+    const prsData = await prsRes.json();
+    const prs = prsData.data || [];
+    currentPRs = prs;
     const createArea = document.getElementById('fi-create-branch-area');
 
     if (!repoData.connected) {
@@ -1129,9 +1144,19 @@ async function loadFullIssueBranches(id) {
         el.innerHTML = branches.map((b, i) => {
             const sq = sonarResults[i] || {};
             const chip = sonarQGChip(sq.success ? sq.status : null, sq.url);
-            return `<div style="padding:0.25rem 0;border-bottom:1px solid var(--border);font-size:0.78rem;display:flex;align-items:center;gap:0.4rem;overflow:hidden;">
-                <span style="font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">&#127807; ${escapeHtml(b.branch_name)}</span>
-                ${chip}
+            const existingPR = prs.find(pr => pr.branch === b.branch_name);
+            const prBtn = existingPR
+                ? `<button onclick="openDiffViewer(${existingPR.number})" style="font-size:0.75rem;color:#fff;background:var(--color-primary);border:none;border-radius:4px;padding:0.25rem 0.6rem;cursor:pointer;font-weight:600;">PR #${existingPR.number} &#128065;</button>`
+                : `<button onclick="openCreatePRModal('${escapeHtml(b.branch_name)}')" style="font-size:0.75rem;color:#16a34a;background:none;border:1px solid #16a34a;border-radius:4px;padding:0.25rem 0.6rem;cursor:pointer;">&#8593; Create PR</button>`;
+            return `<div class="branch-item" style="padding:0.25rem 0;border-bottom:1px solid var(--border);">
+                <div style="font-size:0.78rem;display:flex;align-items:center;justify-content:space-between;gap:0.4rem;overflow:hidden;">
+                    <span style="font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">&#127807; ${escapeHtml(b.branch_name)}${chip ? ' ' + chip : ''}</span>
+                    <div style="display:flex;gap:0.3rem;flex-shrink:0;">
+                        ${prBtn}
+                        <button onclick="toggleCommits(${id}, '${escapeHtml(b.branch_name)}', this)" style="font-size:0.75rem;color:var(--color-primary);background:none;border:none;cursor:pointer;">&#9654; Commits</button>
+                    </div>
+                </div>
+                <div class="commits-panel" style="display:none;margin-top:0.4rem;padding-left:0.75rem;border-left:2px solid #e5e7eb;"></div>
             </div>`;
         }).join('');
     }
