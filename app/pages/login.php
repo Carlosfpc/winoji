@@ -8,12 +8,12 @@ if (isset($_SESSION['user'])) {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Login — Team App</title>
+    <title>Login — WINOJI</title>
     <link rel="stylesheet" href="<?= APP_URL ?>/app/assets/css/main.css">
 </head>
 <body class="auth-page">
     <div class="auth-box">
-        <h1>Team App</h1>
+        <h1>WINOJI</h1>
         <form id="login-form">
             <label>Email</label>
             <input type="email" id="email" required>

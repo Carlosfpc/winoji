@@ -514,10 +514,10 @@ function maybe_send_email_notification(int $user_id, string $type, string $entit
         $title = htmlspecialchars($entity_title ?? '', ENT_QUOTES);
         $actor = htmlspecialchars($actor_name ?? 'Alguien', ENT_QUOTES);
 
-        $subject = "[Team App] {$type_label}" . ($entity_title ? ": {$entity_title}" : '');
+        $subject = "[WINOJI] {$type_label}" . ($entity_title ? ": {$entity_title}" : '');
         $body    = "<h3 style='color:#4f46e5;'>{$type_label}</h3>
                     <p><strong>{$actor}</strong> ha realizado una acción sobre <em>{$title}</em>.</p>
-                    <p style='color:#6b7280;font-size:0.875rem;'>Accede a Team App para ver los detalles.</p>";
+                    <p style='color:#6b7280;font-size:0.875rem;'>Accede a WINOJI para ver los detalles.</p>";
 
         send_notification_email($user['email'], $user['name'], $subject, $body);
     } catch (Exception $e) {

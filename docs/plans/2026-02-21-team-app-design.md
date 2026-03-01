@@ -1,9 +1,9 @@
-# Team App — Design Document
+# WINOJI — Design Document
 **Date:** 2026-02-21
 
 ## Overview
 
-Internal team application combining wiki/documentation (Notion-style) and task management (Jira-style) with GitHub integration. Built for internal use by a single team, with user and team management.
+Internal WINOJIlication combining wiki/documentation (Notion-style) and task management (Jira-style) with GitHub integration. Built for internal use by a single team, with user and team management.
 
 **Stack:** PHP vanilla + HTML/CSS/JavaScript vanilla + MySQL
 **Architecture:** Hybrid — PHP server-renders page shells, dynamic content loads via AJAX to PHP API endpoints.
