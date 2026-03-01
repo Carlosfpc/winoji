@@ -69,6 +69,7 @@ $initial = htmlspecialchars(mb_strtoupper(mb_substr($cu['name'], 0, 1)));
             <li><a href="<?= APP_URL ?>?page=team">Equipo</a></li>
             <li><a href="<?= APP_URL ?>?page=project">Proyecto</a></li>
             <li><a href="<?= APP_URL ?>?page=roadmap">Roadmap</a></li>
+            <li><a href="<?= APP_URL ?>?page=sonar">Sonar</a></li>
         </ul>
     </nav>
     <div class="main-column">

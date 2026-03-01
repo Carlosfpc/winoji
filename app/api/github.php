@@ -299,22 +299,31 @@ function get_issue_branches_live(int $issue_id, int $user_id): array {
     $token = $repo['access_token'] ?: get_user_github_token($user_id);
     if (!$token) return $branches;
 
-    // Fetch all branches from GitHub to check existence
+    // Fetch up to 100 branches from GitHub (covers most repos)
     $result = github_request($token, "repos/{$repo['repo_full_name']}/branches?per_page=100");
     if ($result['status'] !== 200) return $branches;
 
     $liveBranches = array_column($result['body'], 'name');
 
-    // Filter: only return branches that still exist in GitHub; remove deleted ones from DB
+    // Filter: only return branches that still exist in GitHub; remove deleted ones from DB.
+    // For branches not found in the listing (repo may have >100, or GitHub indexing delay),
+    // verify existence with a direct API call before deleting from DB.
     $active = [];
     foreach ($branches as $b) {
         if (in_array($b['branch_name'], $liveBranches)) {
             $active[] = $b;
-        } elseif (empty($b['pr_number'])) {
-            // Branch deleted in GitHub and no PR linked — safe to remove from DB
-            $pdo->prepare('DELETE FROM branches WHERE id = ?')->execute([$b['id']]);
+        } else {
+            // Verify the branch actually no longer exists (avoids false deletions)
+            $check = github_request($token, "repos/{$repo['repo_full_name']}/branches/" . urlencode($b['branch_name']));
+            if ($check['status'] === 200) {
+                // Branch exists but wasn't in the first 100 — keep it
+                $active[] = $b;
+            } elseif ($check['status'] === 404 && empty($b['pr_number'])) {
+                // Confirmed deleted in GitHub and no PR linked — safe to remove from DB
+                $pdo->prepare('DELETE FROM branches WHERE id = ?')->execute([$b['id']]);
+            }
+            // If branch has a PR (or GitHub check failed), keep the DB record
         }
-        // If branch has a PR, keep the DB record so we can still view its diff
     }
     return $active;
 }
