@@ -1,4 +1,4 @@
-# Team App — Diseño de Completación
+# WINOJI — Diseño de Completación
 **Fecha:** 2026-02-21
 **Estado:** Aprobado
 

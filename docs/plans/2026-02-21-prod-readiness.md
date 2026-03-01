@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
 
-**Goal:** Make the Team App production-ready with proper security hardening, missing features, and operational tooling.
+**Goal:** Make the WINOJI production-ready with proper security hardening, missing features, and operational tooling.
 
 **Architecture:** PHP 8.x vanilla + MySQL 8.x + Vanilla JS. No composer, no frameworks.
 
@@ -43,7 +43,7 @@ SMTP_PORT=587
 SMTP_USER=noreply@example.com
 SMTP_PASS=smtppassword
 SMTP_FROM=noreply@example.com
-SMTP_FROM_NAME=Team App
+SMTP_FROM_NAME=WINOJI
 ```
 
 **Step 2: Create `.env` for local dev**
@@ -62,7 +62,7 @@ SMTP_PORT=1025
 SMTP_USER=
 SMTP_PASS=
 SMTP_FROM=noreply@localhost
-SMTP_FROM_NAME=Team App Dev
+SMTP_FROM_NAME=WINOJI Dev
 ```
 
 **Step 3: Add `.env` to `.gitignore`**
@@ -103,7 +103,7 @@ define('SMTP_PORT',  (int) env('SMTP_PORT', '25'));
 define('SMTP_USER',  env('SMTP_USER', ''));
 define('SMTP_PASS',  env('SMTP_PASS', ''));
 define('SMTP_FROM',  env('SMTP_FROM', 'noreply@localhost'));
-define('SMTP_FROM_NAME', env('SMTP_FROM_NAME', 'Team App'));
+define('SMTP_FROM_NAME', env('SMTP_FROM_NAME', 'WINOJI'));
 ```
 
 **Step 5: Verify PHP lint**
@@ -641,7 +641,7 @@ require_once __DIR__ . '/../includes/mailer.php';
 
 $loginUrl = APP_URL . '?page=login';
 $html = "
-<h2>You've been invited to Team App</h2>
+<h2>You've been invited to WINOJI</h2>
 <p>Your account has been created. Use these credentials to log in:</p>
 <ul>
   <li><strong>Email:</strong> $email</li>
@@ -650,7 +650,7 @@ $html = "
 <p><a href=\"$loginUrl\">Log in now</a></p>
 <p>Please change your password after logging in.</p>
 ";
-send_email($email, 'You have been invited to Team App', $html);
+send_email($email, 'You have been invited to WINOJI', $html);
 ```
 
 The `$email` and `$temp_password` variables should already be in scope where you add this — find the right spot in the existing invite flow.
@@ -1148,7 +1148,7 @@ post_max_size = 10M
 **Step 4: Create `README.md`**
 
 ```markdown
-# Team App
+# WINOJI
 
 Internal team collaboration tool — Notion-style wiki + Jira-style issues + GitHub integration.
 
@@ -1247,7 +1247,7 @@ See `docker/nginx.conf` for reference configuration.
 | `SMTP_USER` | SMTP username | — |
 | `SMTP_PASS` | SMTP password | — |
 | `SMTP_FROM` | From email address | — |
-| `SMTP_FROM_NAME` | From display name | `Team App` |
+| `SMTP_FROM_NAME` | From display name | `WINOJI` |
 
 ## Security Notes
 

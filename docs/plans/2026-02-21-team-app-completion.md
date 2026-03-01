@@ -1,8 +1,8 @@
-# Team App Completion — Implementation Plan
+# WINOJI Completion — Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Fix all critical bugs and implement all missing features to make the team app production-ready.
+**Goal:** Fix all critical bugs and implement all missing features to make the WINOJI production-ready.
 
 **Architecture:** PHP 8.x vanilla + MySQL. Pages server-render HTML shells; JS fetches data via API endpoints in `app/api/`. Auth via PHP sessions. All DB via PDO prepared statements.
 
@@ -268,7 +268,7 @@ git commit -m "fix: sanitize wiki HTML with DOMPurify (client) and strip_tags (s
 
 **Step 1: Add project switcher HTML to `app/includes/layout_top.php`**
 
-In the sidebar `<nav>`, add after `<div class="sidebar-logo">Team App</div>`:
+In the sidebar `<nav>`, add after `<div class="sidebar-logo">WINOJI</div>`:
 
 ```html
 <div class="project-switcher">

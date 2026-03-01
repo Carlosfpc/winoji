@@ -1,8 +1,8 @@
-# Team App — App Improvements Implementation Plan
+# WINOJI — App Improvements Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Implement 24 improvements across bugs, enhancements, new features, and UX polish for the Team App.
+**Goal:** Implement 24 improvements across bugs, enhancements, new features, and UX polish for the WINOJI.
 
 **Architecture:** PHP 8.x vanilla backend + Vanilla JS frontend. All API endpoints in `app/api/`, page shells in `app/pages/`, shared JS in `app/assets/js/`. DB migrations go in `db/migrations/`.
 
@@ -1276,7 +1276,7 @@ Replace hardcoded colors in CSS with variables where appropriate (main backgroun
 
 **Step 2: Add dark mode toggle button in layout_top.php**
 
-In the sidebar, after the `<div class="sidebar-logo">Team App</div>`, add:
+In the sidebar, after the `<div class="sidebar-logo">WINOJI</div>`, add:
 ```html
 <button id="theme-toggle" style="position:absolute;top:0.75rem;right:0.75rem;background:none;border:none;cursor:pointer;font-size:1.1rem;color:#c7c7d4;" title="Cambiar tema">&#9790;</button>
 ```

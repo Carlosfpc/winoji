@@ -301,7 +301,7 @@ async function loadProfile() {
     renderIssues(issues);
     renderActivity(activity);
     document.getElementById('profile-content').style.display = 'block';
-    document.title = user.name + ' — Team App';
+    document.title = user.name + ' — WINOJI';
 }
 
 loadProfile();
