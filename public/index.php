@@ -34,7 +34,7 @@ require_once __DIR__ . '/../app/includes/db.php';
 require_once __DIR__ . '/../app/includes/auth.php';
 
 $page = $_GET['page'] ?? 'login';
-$allowed = ['login', 'dashboard', 'wiki', 'issues', 'kanban', 'sprint', 'team', 'project', 'profile', 'roadmap', 'notifications', 'user_profile'];
+$allowed = ['login', 'dashboard', 'wiki', 'issues', 'kanban', 'sprint', 'team', 'project', 'profile', 'roadmap', 'notifications', 'user_profile', 'sonar'];
 
 if (!in_array($page, $allowed)) {
     $page = '404';

@@ -64,16 +64,22 @@ function delete_sonar_config(int $project_id): array {
 }
 
 /* ── SonarQube data ── */
-function get_sonar_project_status(int $project_id, string $branch = ''): array {
+function get_sonar_project_status(int $project_id, string $branch = '', string $pullRequest = ''): array {
     $cfg = get_sonar_config($project_id);
     if (!$cfg) return ['success' => false, 'error' => 'SonarQube no configurado'];
 
-    $key     = urlencode($cfg['sonar_project_key']);
-    $branchQ = $branch ? '&branch=' . urlencode($branch) : '';
+    $key      = urlencode($cfg['sonar_project_key']);
+    if ($pullRequest) {
+        $contextQ = '&pullRequest=' . urlencode($pullRequest);
+    } elseif ($branch) {
+        $contextQ = '&branch=' . urlencode($branch);
+    } else {
+        $contextQ = '';
+    }
 
     // Quality gate
     $qg = sonar_request($cfg['sonar_url'], $cfg['sonar_token'],
-        "qualitygates/project_status?projectKey={$key}{$branchQ}");
+        "qualitygates/project_status?projectKey={$key}{$contextQ}");
 
     if ($qg['status'] === 401) return ['success' => false, 'error' => 'Token inválido (401)'];
     if ($qg['status'] === 404) return ['success' => false, 'error' => 'Proyecto no encontrado en SonarQube'];
@@ -81,27 +87,71 @@ function get_sonar_project_status(int $project_id, string $branch = ''): array {
 
     $qgStatus = $qg['body']['projectStatus']['status'] ?? 'NONE';
 
-    // Metrics
+    // Extended metrics
+    $metricKeys = implode(',', [
+        // Ratings & quality gate core
+        'bugs', 'vulnerabilities', 'code_smells', 'security_hotspots',
+        'security_rating', 'reliability_rating', 'sqale_rating', 'security_review_rating',
+        // Debt & density
+        'sqale_index', 'duplicated_lines_density',
+        // Coverage
+        'coverage', 'lines_to_cover', 'uncovered_lines',
+        'tests', 'test_success_density', 'test_failures', 'test_errors', 'skipped_tests',
+        // Duplication detail
+        'duplicated_lines', 'duplicated_blocks', 'duplicated_files',
+        // Size
+        'ncloc', 'lines', 'statements', 'functions', 'classes', 'files',
+        // Complexity
+        'complexity', 'cognitive_complexity',
+        // New code period metrics
+        'new_bugs', 'new_vulnerabilities', 'new_code_smells',
+        'new_coverage', 'new_duplicated_lines_density',
+    ]);
+
     $metrics = sonar_request($cfg['sonar_url'], $cfg['sonar_token'],
-        "measures/component?component={$key}{$branchQ}&metricKeys=bugs,vulnerabilities,code_smells,duplicated_lines_density,coverage,security_rating,reliability_rating,sqale_rating,security_hotspots,sqale_index,ncloc");
+        "measures/component?component={$key}{$contextQ}&metricKeys={$metricKeys}");
 
     $measures = [];
     if ($metrics['status'] === 200) {
         foreach ($metrics['body']['component']['measures'] ?? [] as $m) {
-            $measures[$m['metric']] = $m['value'] ?? '—';
+            if (isset($m['value'])) {
+                $measures[$m['metric']] = $m['value'];
+            } elseif (!empty($m['periods'])) {
+                // New-code period metrics
+                $measures[$m['metric']] = $m['periods'][0]['value'] ?? '—';
+            } else {
+                $measures[$m['metric']] = '—';
+            }
         }
     }
 
-    $sonarLink = $cfg['sonar_url'] . '/dashboard?id=' . urlencode($cfg['sonar_project_key'])
-               . ($branch ? '&branch=' . urlencode($branch) : '');
+    // Last analysis info
+    $lastAnalysis = null;
+    $analyses = sonar_request($cfg['sonar_url'], $cfg['sonar_token'],
+        "project_analyses/search?project={$key}&ps=1");
+    if ($analyses['status'] === 200 && !empty($analyses['body']['analyses'])) {
+        $a = $analyses['body']['analyses'][0];
+        $lastAnalysis = [
+            'date'    => $a['date']           ?? null,
+            'version' => $a['projectVersion'] ?? null,
+        ];
+    }
+
+    $sonarLink = $cfg['sonar_url'] . '/dashboard?id=' . urlencode($cfg['sonar_project_key']);
+    if ($pullRequest) {
+        $sonarLink .= '&pullRequest=' . urlencode($pullRequest);
+    } elseif ($branch) {
+        $sonarLink .= '&branch=' . urlencode($branch);
+    }
 
     return [
-        'success'     => true,
-        'status'      => $qgStatus,
-        'metrics'     => $measures,
-        'url'         => $sonarLink,
-        'project_key' => $cfg['sonar_project_key'],
-        'sonar_url'   => $cfg['sonar_url'],
+        'success'       => true,
+        'status'        => $qgStatus,
+        'metrics'       => $measures,
+        'url'           => $sonarLink,
+        'project_key'   => $cfg['sonar_project_key'],
+        'sonar_url'     => $cfg['sonar_url'],
+        'last_analysis' => $lastAnalysis,
     ];
 }
 
@@ -125,10 +175,41 @@ if (php_sapi_name() !== 'cli') {
         })()),
 
         $method === 'GET'  && $action === 'status'  => print json_encode((function() {
-            $pid    = (int)($_GET['project_id'] ?? 0);
-            $branch = $_GET['branch'] ?? '';
+            $pid = (int)($_GET['project_id'] ?? 0);
+            $branch = $_GET['branch']       ?? '';
+            $pr     = $_GET['pull_request'] ?? '';
             require_project_access($pid);
-            return get_sonar_project_status($pid, $branch);
+            return get_sonar_project_status($pid, $branch, $pr);
+        })()),
+
+        $method === 'GET'  && $action === 'branches' => print json_encode((function() {
+            $pid = (int)($_GET['project_id'] ?? 0);
+            require_project_access($pid);
+            $cfg = get_sonar_config($pid);
+            if (!$cfg) return ['success' => false, 'error' => 'SonarQube no configurado'];
+            $key = urlencode($cfg['sonar_project_key']);
+
+            $rb = sonar_request($cfg['sonar_url'], $cfg['sonar_token'], "project_branches/list?project={$key}");
+            $branches = $rb['status'] === 200
+                ? array_map(fn($b) => [
+                    'name'   => $b['name'],
+                    'isMain' => $b['isMain'] ?? false,
+                    'status' => $b['status']['qualityGateStatus'] ?? 'NONE',
+                  ], $rb['body']['branches'] ?? [])
+                : [];
+
+            $rp = sonar_request($cfg['sonar_url'], $cfg['sonar_token'], "project_pull_requests/list?project={$key}");
+            $pullRequests = $rp['status'] === 200
+                ? array_map(fn($pr) => [
+                    'key'    => $pr['key'],
+                    'title'  => $pr['title']  ?? '',
+                    'branch' => $pr['branch'] ?? '',
+                    'base'   => $pr['base']   ?? '',
+                    'status' => $pr['status']['qualityGateStatus'] ?? 'NONE',
+                  ], $rp['body']['pullRequests'] ?? [])
+                : [];
+
+            return ['success' => true, 'branches' => $branches, 'pullRequests' => $pullRequests];
         })()),
 
         $method === 'POST' && $action === 'save'    => print json_encode((function() use ($b) {
